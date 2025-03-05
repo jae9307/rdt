@@ -13,11 +13,11 @@ def create_packet(src_port, dst_port, payload):
 
     # Calculate the packet's checksum
     checksum = 0
-    for index in range(0, len(packet_with_payload), 2):
-        checksum += ((packet_with_payload[index] << 8)
-                     + packet_with_payload[index + 1])
-    checksum = (checksum >> 16) + (checksum & 0xFFFF)
-    checksum = ~checksum & 0xFFFF
+    # for index in range(0, len(packet_with_payload), 2):
+    #     checksum += ((packet_with_payload[index] << 8)
+    #                  + packet_with_payload[index + 1])
+    # checksum = (checksum >> 16) + (checksum & 0xFFFF)
+    # checksum = ~checksum & 0xFFFF
 
     return (packet_with_payload[:6] + struct.pack('!H', checksum)
             + packet_with_payload[8:])
@@ -30,9 +30,9 @@ def udt_send(packet, address, port):
     finally:
         udp_socket.close()
 
-def rdt_receive(address, src_port):
+def rdt_receive(address, local_port):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket.bind((address, src_port))
+    udp_socket.bind((address, local_port))
     udp_socket.settimeout(3)
 
     try:
@@ -42,14 +42,19 @@ def rdt_receive(address, src_port):
 
 def rdt_sender_process():
     address = socket.gethostbyname(socket.gethostname())
-
-    src_port = 23  # arbitrarily chosen number
+    sender_port = 23  # arbitrarily chosen number
     network_proxy_port = 19   # arbitrary number
-    payload = "test string"
+    payload = bytes("test string", encoding='utf-8')
 
-    packet = create_packet(src_port, network_proxy_port, payload)
+    packet = create_packet(sender_port, network_proxy_port, payload)
 
     start_time = time.time()
     udt_send(packet, address, network_proxy_port)
 
-    rdt_receive(address, src_port)
+    # rdt_receive(address, sender_port)
+
+def main():
+    rdt_sender_process()
+
+if __name__ == '__main__':
+    main()
