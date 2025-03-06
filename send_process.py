@@ -5,10 +5,13 @@ import time
 def create_packet(src_port, dst_port, payload):
 
     initial_checksum = 0
-    length = 8 + len(payload)   # size of header is 8 bytes
+    length = 12 + len(payload)   # size of header is 12 bytes
+    is_ack = False
+    seq_num = 0
 
-    initial_packet = struct.pack('!HHHH', src_port, dst_port, length,
-                                 initial_checksum)
+
+    initial_packet = struct.pack('!HHLHBB', src_port, dst_port, seq_num,
+                                 initial_checksum, length, is_ack)
     packet_with_payload = initial_packet + payload
 
     # Calculate the packet's checksum
@@ -33,25 +36,30 @@ def udt_send(packet, address, port):
 def rdt_receive(address, local_port):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.bind((address, local_port))
-    udp_socket.settimeout(3)
+    # udp_socket.settimeout(3)
 
     try:
         packet, addr = udp_socket.recvfrom(65565)
     finally:
         udp_socket.close()
 
+    return packet
+
 def rdt_sender_process():
     address = socket.gethostbyname(socket.gethostname())
     sender_port = 23  # arbitrarily chosen number
     network_proxy_port = 19   # arbitrary number
+    receiver_port = 67  # arbitrary number
     payload = bytes("test string", encoding='utf-8')
 
-    packet = create_packet(sender_port, network_proxy_port, payload)
+    packet = create_packet(sender_port, receiver_port, payload)
 
     start_time = time.time()
     udt_send(packet, address, network_proxy_port)
 
-    # rdt_receive(address, sender_port)
+    packet = rdt_receive(address, sender_port)
+
+    print(f"Ack: {packet}")
 
 def main():
     rdt_sender_process()

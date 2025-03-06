@@ -1,4 +1,6 @@
 import socket
+import struct
+
 
 def recieve(address, local_port):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,15 +25,17 @@ def forward(packet, address, dst_port):
 def act_as_network():
     address = socket.gethostbyname(socket.gethostname())
     network_proxy_port = 19  # arbitrarily chosen number
-    server_port = 67   # arbitrary number
+    receiver_port = 67   # arbitrary number
+    sender_port = 23   # arbitrary number
 
-    packet = recieve(address, network_proxy_port)
+    while True:
+        packet = recieve(address, network_proxy_port)
+        print(f"Network: {packet}")
 
-    # TODO: mess up packet in some way
+        # TODO: mess up packet in some way
 
-    # TODO: check who is sending the packet, act accordingly
-
-    forward(packet, address, server_port)
+        src_port, dst_port, seq_num, initial_checksum, length, is_ack = struct.unpack('!HHLHBB', packet[0:12])
+        forward(packet, address, dst_port)
 
 def main():
     act_as_network()
