@@ -46,7 +46,7 @@ def act_as_network():
 
         now = time.time()
         # print(f"time: {now - start_time}")
-        if now - start_time >= 0.009 and len(queue) > 0:
+        if now - start_time >= 0.09 and len(queue) > 0:
             send_packet = queue.pop(0)
             src_port, dst_port, seq_num, initial_checksum, length, is_ack = struct.unpack('!HHLHBB', send_packet[0:12])
             forward(send_packet, address, dst_port)

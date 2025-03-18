@@ -63,7 +63,7 @@ def rdt_sender_process():
         packet = create_packet(sender_port, receiver_port, message, index)
         print(f"Sending: {time.time()}")
         udt_send(packet, address, network_proxy_port)
-        time.sleep(0.00001)
+        time.sleep(0.001)
 
     while True:
         # print(f"Receiving: {time.time()}")
