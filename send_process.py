@@ -2,7 +2,7 @@ import socket
 import struct
 import time
 
-def create_packet(src_port, dst_port, payload):
+def create_packet(src_port, dst_port, payload, ack_num):
 
     initial_checksum = 0
     length = 12 + len(payload)   # size of header is 12 bytes
@@ -10,8 +10,8 @@ def create_packet(src_port, dst_port, payload):
     seq_num = 0
 
 
-    initial_packet = struct.pack('!HHLHBB', src_port, dst_port, seq_num,
-                                 initial_checksum, length, is_ack)
+    initial_packet = struct.pack('!HHLHBBB', src_port, dst_port, seq_num,
+                                 initial_checksum, length, is_ack, ack_num)
     packet_with_payload = initial_packet + payload
 
     # Calculate the packet's checksum
@@ -36,10 +36,14 @@ def udt_send(packet, address, port):
 def rdt_receive(address, local_port):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.bind((address, local_port))
-    # udp_socket.settimeout(3)
+    udp_socket.settimeout(0.001)
+
+    packet = None
 
     try:
         packet, addr = udp_socket.recvfrom(65565)
+    except OSError:
+        pass
     finally:
         udp_socket.close()
 
@@ -50,16 +54,26 @@ def rdt_sender_process():
     sender_port = 23  # arbitrarily chosen number
     network_proxy_port = 19   # arbitrary number
     receiver_port = 67  # arbitrary number
-    payload = bytes("test string", encoding='utf-8')
 
-    packet = create_packet(sender_port, receiver_port, payload)
+    messages = []
 
     start_time = time.time()
-    udt_send(packet, address, network_proxy_port)
+    for index in range(4):
+        message = (bytes(f"test string{index}", encoding='utf-8'))
+        packet = create_packet(sender_port, receiver_port, message, index)
+        print(f"Sending: {time.time()}")
+        udt_send(packet, address, network_proxy_port)
+        time.sleep(0.00001)
 
-    packet = rdt_receive(address, sender_port)
+    while True:
+        # print(f"Receiving: {time.time()}")
+        packet = rdt_receive(address, sender_port)
+        if packet is not None:
+            print(f"Ack: {packet}")
 
-    print(f"Ack: {packet}")
+    # end_time = time.time()
+    #
+    # print(f"Elapsed: {end_time - start_time}")
 
 def main():
     rdt_sender_process()
