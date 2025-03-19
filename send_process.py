@@ -115,6 +115,7 @@ def rdt_sender_process(content):
                                        receiver_port, address,
                                        network_proxy_port)
                 timers = timers[num_to_send:] + new_timers
+                window_end_index += num_to_send
             else:
                 break
 
