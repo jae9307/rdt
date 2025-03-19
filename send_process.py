@@ -52,7 +52,6 @@ def send_multiple(messages, start_index, num_to_send, sender_port,
                   receiver_port, address, network_proxy_port):
     timers = []
 
-    print(f"sending_num: {num_to_send}")
     for index in range(start_index, start_index + num_to_send):
         message = (bytes(messages[index], encoding='utf-8'))
         timers.append(time.time())
@@ -86,7 +85,6 @@ def rdt_sender_process(content):
     timeout = 1
     while True:
         now = time.time()
-        print(f"timers: {timers}")
         oldest_timer = timers[0]
         if now - oldest_timer > timeout:
             timers = send_multiple(messages, window_end_index
@@ -116,7 +114,7 @@ def rdt_sender_process(content):
                                        network_proxy_port)
                 timers = timers[num_to_send:] + new_timers
                 window_end_index += num_to_send
-            else:
+            elif seq_num == window_end_index:
                 break
 
 def main():
