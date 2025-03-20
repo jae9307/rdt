@@ -32,19 +32,23 @@ def rdt_receiver_process():
     network_proxy_port = 19  # arbitrarily chosen number
     sender_port = 23  # arbitrarily chosen number
 
-    expected_seq_num = 0
+    highest_acked_seq_num = -1
 
     while True:
         packet = rdt_recieve(address, receiver_port)
         if packet is not None:
             print(f"Original: {packet}")
-            # seq_num = struct.unpack("!L", packet[4:8])
-            # if
+            seq_num = struct.unpack("!L", packet[4:8])[0]  # unpack returns
+            # tuple
+            if seq_num - 1 == highest_acked_seq_num:
+                highest_acked_seq_num += 1
 
             # TODO: verify that packet isn't messed up
             is_ack = True
             send_packet = packet
-            send_packet = struct.pack('!HH', receiver_port, sender_port) + send_packet[4:11] + struct.pack('!B', is_ack) + send_packet[12:]
+            send_packet = (struct.pack('!HHL', receiver_port, sender_port,
+                                       highest_acked_seq_num) + send_packet[8:11]
+                           + struct.pack('!B', is_ack) + send_packet[12:])
 
             udt_send(send_packet, address, network_proxy_port)
 

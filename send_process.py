@@ -81,12 +81,14 @@ def rdt_sender_process(content):
                   receiver_port, address, network_proxy_port)
 
     window_end_index = 3  # index of last packet sent
+    highest_acked_seq_num = -1
 
     timeout = 1
     while True:
         now = time.time()
         oldest_timer = timers[0]
         if now - oldest_timer > timeout:
+            print("---Timeout---")
             timers = send_multiple(messages, window_end_index
                                    - (window_size - 1), window_size,
                           sender_port, receiver_port, address,
@@ -98,24 +100,29 @@ def rdt_sender_process(content):
             (src_port, dst_port, seq_num, initial_checksum, length,
              is_ack) = struct.unpack('!HHLHBB', packet[:12])
             print(f"Seq: {seq_num}")
-            num_to_send = window_size - (window_end_index - seq_num)
-            if window_end_index + num_to_send <= len(messages) - 1:
-                new_timers = send_multiple(messages, window_end_index + 1,
-                                           num_to_send, sender_port,
-                                           receiver_port, address,
-                                           network_proxy_port)
-                timers = timers[num_to_send:] + new_timers
-                window_end_index += num_to_send
-            elif len(messages) - 1 > window_end_index:
-                num_to_send = (len(messages) - 1) - window_end_index
-                new_timers = send_multiple(messages, window_end_index + 1,
-                                       num_to_send, sender_port,
-                                       receiver_port, address,
-                                       network_proxy_port)
-                timers = timers[num_to_send:] + new_timers
-                window_end_index += num_to_send
-            elif seq_num == window_end_index:
+
+            if seq_num > highest_acked_seq_num:  # ignore duplicate ACK
+                num_to_send = seq_num - highest_acked_seq_num
+                if window_end_index + num_to_send <= len(messages) - 1:
+                    new_timers = send_multiple(messages, window_end_index + 1,
+                                               num_to_send, sender_port,
+                                               receiver_port, address,
+                                               network_proxy_port)
+                    timers = timers[num_to_send:] + new_timers
+                    window_end_index += num_to_send
+                elif len(messages) - 1 > window_end_index:
+                    num_to_send = (len(messages) - 1) - window_end_index
+                    new_timers = send_multiple(messages, window_end_index + 1,
+                                               num_to_send, sender_port,
+                                               receiver_port, address,
+                                               network_proxy_port)
+                    timers = timers[num_to_send:] + new_timers
+                    window_end_index += num_to_send
+
+                highest_acked_seq_num = seq_num
+            elif seq_num == len(messages) - 1:
                 break
+
 
 def main():
     file = open("input.txt", "r")
