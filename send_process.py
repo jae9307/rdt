@@ -125,14 +125,3 @@ def rdt_sender_process(content):
                     window_end_index += num_to_send
 
                 highest_acked_seq_num = seq_num
-
-
-def main():
-    file = open("input.txt", "r")
-    content = file.read().strip()
-    file.close()
-
-    rdt_sender_process(content)
-
-if __name__ == '__main__':
-    main()
