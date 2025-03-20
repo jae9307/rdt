@@ -26,6 +26,23 @@ def udt_send(packet, address, port):
     finally:
         udp_socket.close()
 
+def validate_checksum(packet):
+    checksum = 0
+    for index in range(0, len(packet), 2):
+        if index + 1 < len(packet):
+            chunk = struct.unpack('!H', packet[index:index + 2])[0]
+        else:
+            chunk = struct.unpack('!H', packet[index:index + 1] + b'\x00')[0]
+        checksum += chunk
+    checksum = (checksum >> 16) + (checksum & 0xFFFF)
+    checksum = ~checksum & 0xFFFF
+
+    if checksum == 0:
+        return True
+    else:
+        print(f"Checksum is invalid: {checksum}")
+        return False
+
 def rdt_receiver_process():
     address = socket.gethostbyname(socket.gethostname())
     receiver_port = 67   # arbitrary number
@@ -33,23 +50,26 @@ def rdt_receiver_process():
     sender_port = 23  # arbitrarily chosen number
 
     highest_acked_seq_num = -1
+    is_ack = True
 
     while True:
         packet = rdt_recieve(address, receiver_port)
         if packet is not None:
             print(f"Original: {packet}")
-            seq_num = struct.unpack("!L", packet[4:8])[0]  # unpack returns
-            # tuple
-            if seq_num - 1 == highest_acked_seq_num:
+            src_port, dst_port, seq_num, checksum, length\
+                = struct.unpack('!HHLHB', packet[:11])
+            payload = packet[12:]
+
+            checksum_valid = validate_checksum(packet)
+
+            if seq_num - 1 == highest_acked_seq_num and checksum_valid:
                 highest_acked_seq_num += 1
+            elif highest_acked_seq_num == -1:
+                continue
 
-            # TODO: verify that packet isn't messed up
-            is_ack = True
-            send_packet = packet
-            send_packet = (struct.pack('!HHL', receiver_port, sender_port,
-                                       highest_acked_seq_num) + send_packet[8:11]
-                           + struct.pack('!B', is_ack) + send_packet[12:])
-
+            send_packet = (struct.pack('!HHLHBB', receiver_port, sender_port,
+                                       highest_acked_seq_num, checksum,
+                                       length, is_ack) + payload)
             udt_send(send_packet, address, network_proxy_port)
 
 def main():

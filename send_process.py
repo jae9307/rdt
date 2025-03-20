@@ -15,14 +15,17 @@ def create_packet(src_port, dst_port, payload, seq_num):
 
     # Calculate the packet's checksum
     checksum = 0
-    # for index in range(0, len(packet_with_payload), 2):
-    #     checksum += ((packet_with_payload[index] << 8)
-    #                  + packet_with_payload[index + 1])
-    # checksum = (checksum >> 16) + (checksum & 0xFFFF)
-    # checksum = ~checksum & 0xFFFF
+    for index in range(0, len(packet_with_payload), 2):
+        if index + 1 < len(packet_with_payload):
+            chunk = struct.unpack('!H', packet_with_payload[index:index + 2])[0]
+        else:
+            chunk = struct.unpack('!H', packet_with_payload[index:index + 1] + b'\x00')[0]
+        checksum += chunk
+    checksum = (checksum >> 16) + (checksum & 0xFFFF)
+    checksum = ~checksum & 0xFFFF
 
-    return (packet_with_payload[:8] + struct.pack('!H', checksum)
-            + packet_with_payload[10:])
+    return struct.pack('!HHLHBB', src_port, dst_port, seq_num,
+                               checksum, length, is_ack) + payload
 
 
 def udt_send(packet, address, port):
