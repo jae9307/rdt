@@ -104,7 +104,9 @@ def rdt_sender_process(content):
              is_ack) = struct.unpack('!HHLHBB', packet[:12])
             print(f"Seq: {seq_num}")
 
-            if seq_num > highest_acked_seq_num:  # ignore duplicate ACK
+            if seq_num == len(messages) - 1:
+                break
+            elif seq_num > highest_acked_seq_num:  # ignore duplicate ACK
                 num_to_send = seq_num - highest_acked_seq_num
                 if window_end_index + num_to_send <= len(messages) - 1:
                     new_timers = send_multiple(messages, window_end_index + 1,
@@ -123,8 +125,6 @@ def rdt_sender_process(content):
                     window_end_index += num_to_send
 
                 highest_acked_seq_num = seq_num
-            elif seq_num == len(messages) - 1:
-                break
 
 
 def main():
