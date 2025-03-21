@@ -3,7 +3,6 @@ import struct
 import time
 
 def create_packet(src_port, dst_port, payload, seq_num):
-
     initial_checksum = 0
     length = 12 + len(payload)   # size of header is 12 bytes
     is_ack = False

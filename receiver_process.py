@@ -1,7 +1,6 @@
 import socket
 import struct
-import time
-
+import server
 
 def rdt_recieve(address, local_port):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -64,6 +63,7 @@ def rdt_receiver_process():
 
             if seq_num - 1 == highest_acked_seq_num and checksum_valid:
                 highest_acked_seq_num += 1
+                server.forward(payload)
             elif highest_acked_seq_num == -1:
                 continue
 
