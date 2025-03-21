@@ -41,10 +41,8 @@ def act_as_network(args):
         while True:
             packet = recieve(address, network_proxy_port)
             if packet is not None:
-                print(f"Network: {packet}")
+                print(f"Network Receiving: {packet}")
                 queue.append(packet)
-
-            # TODO: mess up packet in some way
 
             now = time.time()
             if now - start_time >= 0.09 and len(queue) > 0:
@@ -53,17 +51,33 @@ def act_as_network(args):
                 forward(send_packet, address, dst_port)
                 start_time = time.time()
 
-            if args.drop and now - drop_time > 4 and len(queue) > 0:
-                print(f"Popping {queue.pop()}")
+            if args.drop and now - drop_time > float(args.drop) and len(queue) > 0:
+                packet_found = False
+                packet_index = 0
+
+                while (not packet_found and len(queue) - 1
+                       >= packet_index):
+                    first_packet = queue[packet_index]
+
+                    is_ack = struct.unpack('!B', first_packet[11:12])[0]
+
+                    if not packet_found:
+                        if is_ack:
+                            packet_index += 1
+                        else:
+                            packet_found = True
+
+                if packet_found:
+                    print(f"Popping {queue.pop(packet_index)}")
                 drop_time = time.time()
 
-            if args.corrupt and now - corrupt_time > 4 and len(queue) > 0:
+            if args.corrupt and now - corrupt_time > float(args.corrupt) and len(queue) > 0:
                 packet = queue.pop()
                 print(f"corrupting {packet}")
                 queue.append(struct.pack('!H', 678) + packet[2:])
                 corrupt_time = time.time()
 
-            if args.reorder and now - reorder_time > 4 and len(queue) > 1:
+            if args.reorder and now - reorder_time > float(args.reorder) and len(queue) > 1:
                 first_packet_found = False
                 second_packet_found = False
                 first_packet_index = 0
@@ -104,9 +118,9 @@ def main():
     # Define command line parameters.
     parser = argparse.ArgumentParser(
         prog='network_proxy', description='Simulates a network')
-    parser.add_argument('-drop', action='store_true')
-    parser.add_argument('-reorder', action='store_true')
-    parser.add_argument('-corrupt', action='store_true')
+    parser.add_argument('-drop', action='store')
+    parser.add_argument('-reorder', action='store')
+    parser.add_argument('-corrupt', action='store')
 
     args = parser.parse_args()
 

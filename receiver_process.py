@@ -43,6 +43,10 @@ def validate_checksum(packet):
         return False
 
 def rdt_receiver_process():
+    file1 = open("output.txt", "w")  # append mode
+    file1.write("")
+    file1.close()
+
     address = socket.gethostbyname(socket.gethostname())
     receiver_port = 67   # arbitrary number
     network_proxy_port = 19  # arbitrarily chosen number
@@ -55,7 +59,7 @@ def rdt_receiver_process():
         while True:
             packet = rdt_recieve(address, receiver_port)
             if packet is not None:
-                print(f"Original: {packet}")
+                print(f"Receiver Receiving: {packet}")
                 src_port, dst_port, seq_num, checksum, length\
                     = struct.unpack('!HHLHB', packet[:11])
                 payload = packet[12:]

@@ -7,7 +7,6 @@ def create_packet(src_port, dst_port, payload, seq_num):
     length = 12 + len(payload)   # size of header is 12 bytes
     is_ack = False
 
-    print(f"creating seq: {seq_num}")
     initial_packet = struct.pack('!HHLHBB', src_port, dst_port, seq_num,
                                  initial_checksum, length, is_ack)
     packet_with_payload = initial_packet + payload
@@ -58,6 +57,7 @@ def send_multiple(messages, start_index, num_to_send, sender_port,
         message = (bytes(messages[index], encoding='utf-8'))
         timers.append(time.time())
         packet = create_packet(sender_port, receiver_port, message, index)
+        print(f"Sender sending: {packet}")
         udt_send(packet, address, network_proxy_port)
         time.sleep(0.001)
 
@@ -99,7 +99,7 @@ def rdt_sender_process(content):
 
             packet = rdt_receive(address, sender_port)
             if packet is not None:
-                print(f"Ack: {packet}")
+                print(f"Sender Receiving: {packet}")
                 (src_port, dst_port, seq_num, initial_checksum, length,
                  is_ack) = struct.unpack('!HHLHBB', packet[:12])
                 print(f"Seq: {seq_num}")
