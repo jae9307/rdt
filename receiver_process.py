@@ -51,26 +51,29 @@ def rdt_receiver_process():
     highest_acked_seq_num = -1
     is_ack = True
 
-    while True:
-        packet = rdt_recieve(address, receiver_port)
-        if packet is not None:
-            print(f"Original: {packet}")
-            src_port, dst_port, seq_num, checksum, length\
-                = struct.unpack('!HHLHB', packet[:11])
-            payload = packet[12:]
+    try:
+        while True:
+            packet = rdt_recieve(address, receiver_port)
+            if packet is not None:
+                print(f"Original: {packet}")
+                src_port, dst_port, seq_num, checksum, length\
+                    = struct.unpack('!HHLHB', packet[:11])
+                payload = packet[12:]
 
-            checksum_valid = validate_checksum(packet)
+                checksum_valid = validate_checksum(packet)
 
-            if seq_num - 1 == highest_acked_seq_num and checksum_valid:
-                highest_acked_seq_num += 1
-                server.forward(payload)
-            elif highest_acked_seq_num == -1:
-                continue
+                if seq_num - 1 == highest_acked_seq_num and checksum_valid:
+                    highest_acked_seq_num += 1
+                    server.forward(payload)
+                elif highest_acked_seq_num == -1:
+                    continue
 
-            send_packet = (struct.pack('!HHLHBB', receiver_port, sender_port,
-                                       highest_acked_seq_num, checksum,
-                                       length, is_ack) + payload)
-            udt_send(send_packet, address, network_proxy_port)
+                send_packet = (struct.pack('!HHLHBB', receiver_port, sender_port,
+                                           highest_acked_seq_num, checksum,
+                                           length, is_ack) + payload)
+                udt_send(send_packet, address, network_proxy_port)
+    except KeyboardInterrupt:
+        pass
 
 def main():
     rdt_receiver_process()

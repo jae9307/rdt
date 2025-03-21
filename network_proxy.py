@@ -36,65 +36,69 @@ def act_as_network(args):
     drop_time = time.time()
     corrupt_time = time.time()
     reorder_time = time.time()
-    while True:
-        packet = recieve(address, network_proxy_port)
-        if packet is not None:
-            print(f"Network: {packet}")
-            queue.append(packet)
 
-        # TODO: mess up packet in some way
+    try:
+        while True:
+            packet = recieve(address, network_proxy_port)
+            if packet is not None:
+                print(f"Network: {packet}")
+                queue.append(packet)
 
-        now = time.time()
-        if now - start_time >= 0.09 and len(queue) > 0:
-            send_packet = queue.pop(0)
-            src_port, dst_port, seq_num, initial_checksum, length, is_ack = struct.unpack('!HHLHBB', send_packet[0:12])
-            forward(send_packet, address, dst_port)
-            start_time = time.time()
+            # TODO: mess up packet in some way
 
-        if args.drop and now - drop_time > 4 and len(queue) > 0:
-            print(f"Popping {queue.pop()}")
-            drop_time = time.time()
+            now = time.time()
+            if now - start_time >= 0.09 and len(queue) > 0:
+                send_packet = queue.pop(0)
+                src_port, dst_port, seq_num, initial_checksum, length, is_ack = struct.unpack('!HHLHBB', send_packet[0:12])
+                forward(send_packet, address, dst_port)
+                start_time = time.time()
 
-        if args.corrupt and now - corrupt_time > 4 and len(queue) > 0:
-            packet = queue.pop()
-            print(f"corrupting {packet}")
-            queue.append(struct.pack('!H', 678) + packet[2:])
-            corrupt_time = time.time()
+            if args.drop and now - drop_time > 4 and len(queue) > 0:
+                print(f"Popping {queue.pop()}")
+                drop_time = time.time()
 
-        if args.reorder and now - reorder_time > 4 and len(queue) > 1:
-            first_packet_found = False
-            second_packet_found = False
-            first_packet_index = 0
-            second_packet_index = 1
-            first_packet = None
-            second_packet = None
+            if args.corrupt and now - corrupt_time > 4 and len(queue) > 0:
+                packet = queue.pop()
+                print(f"corrupting {packet}")
+                queue.append(struct.pack('!H', 678) + packet[2:])
+                corrupt_time = time.time()
 
-            while not first_packet_found and not second_packet_found\
-                    and len(queue) - 1 >= second_packet_index:
-                first_packet = queue[first_packet_index]
-                second_packet = queue[second_packet_index]
+            if args.reorder and now - reorder_time > 4 and len(queue) > 1:
+                first_packet_found = False
+                second_packet_found = False
+                first_packet_index = 0
+                second_packet_index = 1
+                first_packet = None
+                second_packet = None
 
-                is_ack_1 = struct.unpack('!B', first_packet[11:12])[0]
-                is_ack_2 = struct.unpack('!B', second_packet[11:12])[0]
+                while not first_packet_found and not second_packet_found\
+                        and len(queue) - 1 >= second_packet_index:
+                    first_packet = queue[first_packet_index]
+                    second_packet = queue[second_packet_index]
 
-                if not first_packet_found:
-                    if is_ack_1:
-                        first_packet_index += 1
-                    else:
-                        first_packet_found = True
+                    is_ack_1 = struct.unpack('!B', first_packet[11:12])[0]
+                    is_ack_2 = struct.unpack('!B', second_packet[11:12])[0]
 
-                if first_packet_found and not second_packet_found and not is_ack_2:
-                    second_packet_found = True
-                    break
+                    if not first_packet_found:
+                        if is_ack_1:
+                            first_packet_index += 1
+                        else:
+                            first_packet_found = True
 
-                second_packet_index += 1  # if first packet increments,
-                # second packet has to as well
+                    if first_packet_found and not second_packet_found and not is_ack_2:
+                        second_packet_found = True
+                        break
 
-            if len(queue) - 1 >= second_packet_index:
-                queue[first_packet_index] = second_packet
-                queue[second_packet_index] = first_packet
-                print(f"first: {first_packet}, second: {second_packet}")
-                reorder_time = time.time()
+                    second_packet_index += 1  # if first packet increments,
+                    # second packet has to as well
+
+                if len(queue) - 1 >= second_packet_index:
+                    queue[first_packet_index] = second_packet
+                    queue[second_packet_index] = first_packet
+                    print(f"first: {first_packet}, second: {second_packet}")
+                    reorder_time = time.time()
+    except KeyboardInterrupt:
+        pass
 
 def main():
     # Define command line parameters.
