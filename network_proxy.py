@@ -1,9 +1,16 @@
+"""Simulate network conditions"""
 import socket
 import struct
 import time
 import argparse
 
 def recieve(address, local_port):
+    """
+    Attempt to receive a packet at the given address and port
+
+    :param address: local address
+    :param local_port: local port
+    """
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.bind((address, local_port))
     udp_socket.settimeout(0.001)
@@ -20,6 +27,13 @@ def recieve(address, local_port):
     return packet
 
 def forward(packet, address, dst_port):
+    """
+    Forward received packet to its destination
+
+    :param packet: packet to send
+    :param address: destination address
+    :param dst_port: destination port
+    """
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         udp_socket.sendto(packet, (address, dst_port))
@@ -27,6 +41,11 @@ def forward(packet, address, dst_port):
         udp_socket.close()
 
 def act_as_network(args):
+    """
+    Repeatedly receive packets and send them to their destination
+
+    :param args: command line arguments for manipulating packets
+    """
     address = socket.gethostbyname(socket.gethostname())
     network_proxy_port = 19  # arbitrarily chosen number
 
@@ -39,22 +58,28 @@ def act_as_network(args):
 
     try:
         while True:
+            # If a packet is received, add it to the queue
             packet = recieve(address, network_proxy_port)
             if packet is not None:
                 print(f"Network Receiving: {packet}")
                 queue.append(packet)
 
+            # Forward a packet after a short interval
             now = time.time()
             if now - start_time >= 0.09 and len(queue) > 0:
                 send_packet = queue.pop(0)
-                src_port, dst_port, seq_num, initial_checksum, length, is_ack = struct.unpack('!HHLHBB', send_packet[0:12])
+                src_port, dst_port, seq_num, initial_checksum, length, is_ack\
+                    = struct.unpack('!HHLHBB', send_packet[0:12])
                 forward(send_packet, address, dst_port)
                 start_time = time.time()
 
-            if args.drop and now - drop_time > float(args.drop) and len(queue) > 0:
+            # After defined number of seconds, drop a packet
+            if (args.drop and now - drop_time > float(args.drop)
+                    and len(queue) > 0):
                 packet_found = False
                 packet_index = 0
 
+                # Find a packet sent by the sender_process
                 while (not packet_found and len(queue) - 1
                        >= packet_index):
                     first_packet = queue[packet_index]
@@ -71,13 +96,17 @@ def act_as_network(args):
                     print(f"Popping {queue.pop(packet_index)}")
                 drop_time = time.time()
 
-            if args.corrupt and now - corrupt_time > float(args.corrupt) and len(queue) > 0:
+            # After defined number of seconds, corrupt a packet's data
+            if (args.corrupt and now - corrupt_time > float(args.corrupt)
+                    and len(queue) > 0):
                 packet = queue.pop()
                 print(f"corrupting {packet}")
                 queue.append(struct.pack('!H', 678) + packet[2:])
                 corrupt_time = time.time()
 
-            if args.reorder and now - reorder_time > float(args.reorder) and len(queue) > 1:
+            # After defined number of seconds, reorder two packets
+            if (args.reorder and now - reorder_time > float(args.reorder)
+                    and len(queue) > 1):
                 first_packet_found = False
                 second_packet_found = False
                 first_packet_index = 0
@@ -85,6 +114,7 @@ def act_as_network(args):
                 first_packet = None
                 second_packet = None
 
+                # Find two packets sent by the sender_process
                 while not first_packet_found and not second_packet_found\
                         and len(queue) - 1 >= second_packet_index:
                     first_packet = queue[first_packet_index]
@@ -99,7 +129,8 @@ def act_as_network(args):
                         else:
                             first_packet_found = True
 
-                    if first_packet_found and not second_packet_found and not is_ack_2:
+                    if (first_packet_found and not second_packet_found
+                            and not is_ack_2):
                         second_packet_found = True
                         break
 
@@ -115,6 +146,7 @@ def act_as_network(args):
         pass
 
 def main():
+    """Process command line arguments and call act_as_network"""
     # Define command line parameters.
     parser = argparse.ArgumentParser(
         prog='network_proxy', description='Simulates a network')
